@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "Prediction Assignment Write up"
 author: "Camilo Rojas"
 date: "2024-02-19"
 output: html_document
@@ -9,22 +9,72 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+# Abstract
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+The objetive of this R markdown document is to show two different analysis for predictions for the data set "pml" by the metodology of Random Forest and Regression trees
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+For this analysis i used the librarys of: Caret, rio, randomForest
 
-```{r cars}
-summary(cars)
+# Exercise 
+
+## 1 Load the information 
+
+```{r import_data}
+library(rio)
+library(caret)
+library(randomForest)
+library(rattle)
+
+training <- import("data/pml-training.csv")
+testing <- import("data/pml-testing.csv")
+
 ```
 
-## Including Plots
+## Clean data
 
-You can also embed plots, for example:
+For improve this process i had to remove the columns in the database that dont have any information
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r clean}
+training_names <- colnames(training)[!colSums(is.na(training))>0]
+
+training_names <- training_names[8:length(training_names)]
+
+training <- training[training_names]
+
+testing_names <- colnames(testing)[!colSums(is.na(testing))>0]
+
+testing_names <- testing_names[8:length(testing_names)]
+
+testing <- testing[testing_names]
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+## Random Forest 
+
+```{r RF}
+
+rf_model <- train(classe ~., data = training, method = "rf")
+
+predict_model <- predict(rf_model, newdata = testing)
+
+testing$classe <- predict_model
+training$classe <- factor(training$classe)
+
+confusionMatrix(testing$classe, predict_model)
+
+```
+
+##### decisions tree ####
+
+```{r DT}
+modFit <- train(classe~., method = "rpart", data = training)
+
+print(modFit$finalModel)
+
+plot(modFit$finalModel, uniform = T, main = "Decision Tree")
+text(modFit$finalModel, use.n = T, all = T, cex = 0.8)
+
+
+fancyRpartPlot(modFit$finalModel)
+```
